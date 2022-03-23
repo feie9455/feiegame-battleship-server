@@ -43,15 +43,16 @@ wss.on('connection', function connection(ws) {
                 break;
             case "creategame":
                 let id = uuidv4()
-                console.log(`INSERT INTO savesmap(name,uuid,blueState,redState,gameState) value("${dataArr[1]}","${id}",0,0,0)`);
-                sql.query(`INSERT INTO savesmap(name,uuid,blueState,redState,gameState) value("${dataArr[1]}","${id}",0,0,0)`, function (err, result) {
+                let sqlString = `INSERT INTO savesmap(name,uuid,blueState,redState,gameState) value("${dataArr[1]}","${id}",0,0,0)`
+                console.log(sqlString);
+                sql.query(sqlString, function (err, result) {
                     if (err) {
                         console.log('[INSERT ERROR] - ', err.message);
                         return;
                     }
                 }
                 )
-                let createTableSQL = 'CREATE TABLE IF NOT EXISTS `' + id + '`(turn int,Faction CHAR,data JSON);'
+                let createTableSQL = 'CREATE TABLE IF NOT EXISTS `' + id + '`(event CHAR,data JSON);'
                 console.log(createTableSQL);
                 sql.query(createTableSQL, function (err, result) {
                     if (err) {
@@ -86,9 +87,9 @@ wss.on('connection', function connection(ws) {
                             console.log('[CREATE ERROR] - ', err.message);
                             return;
                         }
-                        if (result[0].gameState == "0") {
-                            ws.send(JSON.stringify(["entergame", 0]))
-                        }
+                        getNowTurn(dataArr[1]
+                        ).then(nowTurn => ws.send(JSON.stringify(["entergame", result[0].blueState, result[0].redState, nowTurn])))
+
                     })
                 })
                 break
@@ -106,6 +107,7 @@ wss.on('connection', function connection(ws) {
                 })
 
                 break
+
             default:
                 break;
         }
@@ -137,6 +139,35 @@ function getGames() {
                 returnData.push(line)
             }
             resolve(returnData)
+        })
+    })
+}
+
+function getNowTurn(id) {
+    return new Promise(function (resolve, reject) {
+        let searchBlueSQL = "SELECT * from `" + id + "` WHERE event='bluePut';"
+        let searchRedSQL = "SELECT * from `" + id + "` WHERE event='RedPut';"
+        console.log(searchBlueSQL);
+        console.log(searchRedSQL);
+        Promise.all([SQLselect(searchBlueSQL), SQLselect(searchRedSQL)]).then(result => {
+            if (result[0].length > result[1].length) {
+                resolve([result[0].length, "red"])
+            } else {
+                resolve([result[1].length, "blue"])
+            }
+        })
+    })
+}
+
+function SQLselect(command) {
+    return new Promise(function (resolve, reject) {
+        sql.query(command, function (err, result) {
+            if (err) {
+                console.log("SQL error: " + err);
+                reject(err)
+            } else {
+                resolve(result)
+            }
         })
     })
 }
