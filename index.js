@@ -10,6 +10,7 @@ import { createConnection } from "mysql"
 const server = createServer({
     cert: readFileSync('server.crt'),
     key: readFileSync('server.key'),
+    port: 9454,
 });
 
 const wss = new WebSocketServer({ server });
@@ -88,7 +89,15 @@ wss.on('connection', function connection(ws) {
                             return;
                         }
                         getNowTurn(dataArr[1]
-                        ).then(nowTurn => ws.send(JSON.stringify(["entergame", result[0].blueState, result[0].redState, nowTurn])))
+                        ).then(nowTurn => {
+                            ws.send(JSON.stringify(["entergame", result[0].blueState, result[0].redState, nowTurn]))
+                            ws.uuid = dataArr[1]
+                            wss.clients.forEach(c => {
+                                if (c.uuid == dataArr[1]) {
+                                    c.send(JSON.stringify(["gameframe", "playerjoin", dataArr[2]]))
+                                }
+                            })
+                        })
 
                     })
                 })
@@ -107,7 +116,37 @@ wss.on('connection', function connection(ws) {
                 })
 
                 break
+            case "gameframe":
+                let event
+                let saveid = dataArr[1][0]
+                let faction = dataArr[1][1]
+                if (faction == "blue") {
+                    event = "bluePut"
+                } else {
+                    event = "redPut"
+                }
+                switch (dataArr[2]) {
+                    case "confirm":
+                        let SQLString = "INSERT INTO `" + saveid + "`(event,data) value('" + event + "','" + JSON.stringify(dataArr[3]) + "')"
+                        console.log(SQLString);
+                        sql.query(SQLString, function (err, result) {
+                            if (err) {
+                                console.log('[CREATE ERROR] - ', err.message);
+                                return;
+                            }
 
+                            wss.clients.forEach(c => {
+                                if (c.uuid == saveid) {
+                                    c.send(JSON.stringify(["gameframe", "playerconfirm", faction]))
+                                }
+                            })
+                        })
+
+                        break;
+
+                    default:
+                        break;
+                }
             default:
                 break;
         }
