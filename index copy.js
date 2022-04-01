@@ -60,8 +60,17 @@ wss.on('connection', function connection(ws) {
                 sql.query(sqlString, function (err, result) {
                 }
                 )
-                let d =new Date()
-                writeFileSync("./saves/"+id+".sav",d.toString())
+                let createTableSQL = 'CREATE TABLE IF NOT EXISTS `' + id + '`(event TEXT,data JSON);'
+                console.log(createTableSQL);
+                sql.query(createTableSQL, function (err, result) {
+                    let cTime = new Date()
+                    cTime = cTime.getDate()
+                    let gameSetting = { tags: [], createTime: cTime }
+                    let SQLString = "INSERT INTO `" + id + "`(event,data) value('gameSetting','" + JSON.stringify(gameSetting) + "')"
+                    console.log(SQLString);
+                    sql.query(createTableSQL, function (err, result) {
+                    })
+                })
                 ws.send(JSON.stringify(["enterroom", id, 0, 0]))
                 break;
             case "gstart":
@@ -117,8 +126,95 @@ wss.on('connection', function connection(ws) {
 
                 break
             case "gameframe":
+                let event
+                let saveid = dataArr[1][0]
+                let faction = dataArr[1][1]
+                if (faction == "blue") {
+                    event = "bluePut"
+                } else {
+                    event = "redPut"
+                }
+                switch (dataArr[2]) {
+                    case "confirm":
+                        let SQLString = "INSERT INTO `" + saveid + "`(event,data) value('" + event + "','" + JSON.stringify(dataArr[3]) + "')"
+                        console.log(SQLString);
+                        sql.query(SQLString, function (err, result) {
+                            if (err) {
+                                console.log('[CREATE ERROR] - ', err.message);
+                                return;
+                            }
+                            getNowTurn(saveid).then(turn => {
+                                if (turn[0] > 0) {
+                                    broadcast(saveid, ["gameframe", "next", turn])
+                                }
+                            })
+                            broadcast(saveid, ["gameframe", "playerconfirm", faction])
+                        })
+                        break;
+                    case "getturn":
+                        getNowTurn(saveid).then(turn => {
 
-                break
+                            broadcast(saveid, ["gameframe", "turninfo", turn])
+
+                        })
+                        break
+                    case "attack":
+                        let event_
+                        if (faction == "blue") {
+                            event_ = "redPut"
+                        } else {
+                            event_ = "bluePut"
+                        }
+        
+                        let sql_ = "SELECT * from `" + saveid + "` WHERE event='" + event_ + "';"
+                        console.log(sql_);
+                        SQLselect(sql_).then(oriMap => {
+                            oriMap = oriMap[oriMap.length - 1].data
+                            oriMap = JSON.parse(oriMap)
+                            let attackPos = id2pos(dataArr[3], oriMap[0].length)
+                            let attackObj = oriMap[attackPos[0]][attackPos[1]]
+                            if (attackObj != null) {
+                                broadcast(saveid,["gameframe", "attsuccess", faction, dataArr[3]])
+                                let id = attackObj.id
+                                for (let index = 0; index < oriMap.length; index++) {
+                                    const line = oriMap[index];
+                                    for (let index_ = 0; index_ < line.length; index_++) {
+                                        const block = line[index_];
+                                        if (block) {
+                                            if (block.id == id) {
+                                                oriMap[index][index_].alive--
+
+                                            }
+                                        }
+                                    }
+                                }
+                                oriMap[attackPos[0]][attackPos[1]] = { name: "attacked" }
+
+                            } else {
+                                broadcast(saveid,["gameframe", "attfail", faction, dataArr[3]])
+                                oriMap[attackPos[0]][attackPos[1]] = { name: "attacked" }
+
+                            }
+                            let sql2 = "INSERT INTO `" + saveid + "`(event,data) value('" + event + "','" + JSON.stringify(oriMap) + "')"
+                            console.log(sql2);
+                            sql.query(sql2, function (err, result) {
+                                if (err) {
+                                    console.log('[CREATE ERROR] - ', err.message);
+                                    return;
+                                }
+                                getNowTurn(saveid).then(turn => {
+                                    if (turn[0] > 0) {
+                                        broadcast(saveid, ["gameframe", "next", turn])
+                                    }
+                                })
+
+                            })
+
+                        })
+
+                    default:
+                        break;
+                }
             default:
                 break;
         }
