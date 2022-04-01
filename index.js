@@ -8,8 +8,8 @@ import { format } from 'path';
 import { createConnection } from "mysql"
 
 const server = createServer({
-    cert: readFileSync('C:/xampp/htdocs/WServer/server.crt'),
-    key: readFileSync('C:/xampp/htdocs/WServer/server.key'),
+    cert: readFileSync('C:/xampp/htdocs/crt/server.crt'),
+    key: readFileSync('C:/xampp/htdocs/crt/server.key'),
     port: 9454,
 });
 
@@ -22,6 +22,7 @@ let sql = createConnection({
     database: 'feiegame_battleship'
 });
 
+let width=8
 let gamesArr = getGames()
 const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
@@ -60,8 +61,10 @@ wss.on('connection', function connection(ws) {
                 sql.query(sqlString, function (err, result) {
                 }
                 )
-                let d =new Date()
-                writeFileSync("./saves/"+id+".sav",d.toString())
+                let d = new Date()
+                writeFile("c:/xampp/htdocs/WServer/saves/" + id + ".save", d.toString() + "\n").then(() => {
+                })
+
                 ws.send(JSON.stringify(["enterroom", id, 0, 0]))
                 break;
             case "gstart":
@@ -94,7 +97,7 @@ wss.on('connection', function connection(ws) {
                             ws.uuid = dataArr[1]
                             wss.clients.forEach(c => {
                                 if (c.uuid == dataArr[1]) {
-                                    c.send(JSON.stringify(["gameframe", "playerjoin", dataArr[2]]))
+                                    c.send(JSON.stringify(["gameframe", { type: "playerjoin", data: dataArr[2] }]))
                                 }
                             })
                         })
@@ -117,7 +120,77 @@ wss.on('connection', function connection(ws) {
 
                 break
             case "gameframe":
+                let dataPacket = dataArr[1]
+                switch (dataPacket.type) {
+                    case "confirm":
+                        appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} confirm:\n`)
+                        appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + dataPacket.data + "\n")
+                        broadcast(ws.uuid, ["gameframe", { type: "playerconfirm", data: dataPacket.faction }])
+                        getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+                        break;
+                    case "attack":
+                        let lookForMap
+                        if (dataPacket.faction == "blue") {
+                            lookForMap = "red"
+                        } else {
+                            lookForMap = "blue"
+                        }
+                        let save = getSave(dataPacket.id)
+                        let saveArr = save.split("\n")
+                        let map
+                        if (save.includes("red attack")) {
+                            map = JSON.parse(saveArr[saveArr.lookForLastInclude(lookForMap) - 1].slice(6))
 
+                        } else {
+                            map = JSON.parse(saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6))
+
+                        }
+                        switch (dataPacket.data.type) {
+                            case "normal":
+                                let posToAtt = id2pos(dataPacket.data.pos, 8)
+                                if (map[posToAtt[0]][posToAtt[1]] == null) {
+                                    broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
+                                    map[posToAtt[0]][posToAtt[1]] = "attacked"
+                                } else {
+                                    let dieShip = []
+                                    broadcast(ws.uuid, ["gameframe", { type: "attsuccess", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
+                                    let shipToBeAtt = map[posToAtt[0]][posToAtt[1]]
+                                    for (let index = 0; index < map.length; index++) {
+                                        const element = map[index];
+                                        for (let index_ = 0; index_ < element.length; index_++) {
+                                            const element_ = element[index_];
+                                            if (element_) {
+                                                if (element_.id == shipToBeAtt.id) {
+                                                    element_.alive -= 1
+                                                    if (element_.alive == 0) {
+                                                        dieShip.push(index * width + index_)
+                                                        map[index][index_]="sinkShip"
+                                                    }
+                                                }
+
+                                            }
+                                        }
+                                    }
+                                    if (dieShip.length > 0) {
+                                        broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
+                                        if(!JSON.stringify(map).includes("aliveShip")){
+                                            broadcast(ws.uuid, ["gameframe", { type: "playersuccess",faction: dataPacket.faction}])
+
+                                        }
+                                    }
+
+                                }
+                                appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
+                                appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
+
+                                break;
+                            default:
+                                break;
+                        }
+                        getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+                    default:
+                        break;
+                }
                 break
             default:
                 break;
@@ -157,18 +230,17 @@ function getGames() {
 
 function getNowTurn(id) {
     return new Promise(function (resolve, reject) {
-        let searchBlueSQL = "SELECT * from `" + id + "` WHERE event='bluePut';"
-        let searchRedSQL = "SELECT * from `" + id + "` WHERE event='redPut';"
-        console.log(searchBlueSQL);
-        console.log(searchRedSQL);
-        Promise.all([SQLselect(searchBlueSQL), SQLselect(searchRedSQL)]).then(result => {
-            let turn_ = Math.min(result[1].length, result[0].length)
-            if (result[0].length > result[1].length) {
-                resolve([turn_, "red"])
-            } else {
-                resolve([turn_, "blue"])
-            }
-        })
+        let save = readFileSync("c:/xampp/htdocs/WServer/saves/" + id + ".save")
+        save = util.format("%s", save)
+        let factionNow
+        let turn = Math.min(save.includeTimes("blue"), save.includeTimes("red"))
+        if (save.includeTimes("blue") <= save.includeTimes("red")) {
+            factionNow = "blue"
+        }
+        else {
+            factionNow = "red"
+        }
+        resolve([turn, factionNow])
     })
 }
 
@@ -192,4 +264,48 @@ function broadcast(id, data) {
         }
     })
 
+}
+
+String.prototype.includeTimes = function (str) {
+    let oriStr = this
+    let num = 0
+    let replace = () => {
+        if (oriStr != oriStr.replace(str, "")) {
+            num++
+            oriStr = oriStr.replace(str, "")
+            replace()
+        }
+    }
+    replace()
+    return num
+}
+
+function getSave(id) {
+    let save = readFileSync("c:/xampp/htdocs/WServer/saves/" + id + ".save")
+    save = util.format("%s", save)
+    return save
+}
+
+Array.prototype.lookForLastInclude = function (str) {
+    let pos = -1
+    for (let index = 0; index < this.length; index++) {
+        const element = String(this[index]);
+        if (element.includes(str)) {
+            pos = index
+        }
+    }
+    return pos
+}
+
+Array.prototype.lookForFirstInclude = function (str) {
+    let pos = -1
+    for (let index = 0; index < this.length; index++) {
+        const element = String(this[index]);
+        if (element.includes(str)) {
+            pos = index
+            return pos
+
+        }
+    }
+    return pos
 }
