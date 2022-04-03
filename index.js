@@ -22,7 +22,7 @@ let sql = createConnection({
     database: 'feiegame_battleship'
 });
 
-let width=8
+let width = 8
 let gamesArr = getGames()
 const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
@@ -38,9 +38,7 @@ wss.on('connection', function connection(ws) {
         } catch (error) {
             console.log("dataArr decode fail!\n" + error);
             return
-
         }
-
 
         switch (dataArr[0]) {
             case "eval":
@@ -56,9 +54,15 @@ wss.on('connection', function connection(ws) {
                 break;
             case "creategame":
                 let id = uuidv4()
-                let sqlString = `INSERT INTO savesmap(name,uuid,blueState,redState,gameState) value("${dataArr[1]}","${id}",0,0,0)`
+                let name = dataArr[1].name
+                let tags = dataArr[1].tags
+                let sqlString = `INSERT INTO savesmap(name,uuid,blueState,redState,gameState,tags) value("${name}","${id}",0,0,0,'${JSON.stringify(tags)}')`
                 console.log(sqlString);
                 sql.query(sqlString, function (err, result) {
+                    if (err) {
+                        console.log('[CREATE ERROR] - ', err.message);
+                        return;
+                    }
                 }
                 )
                 let d = new Date()
@@ -100,8 +104,26 @@ wss.on('connection', function connection(ws) {
                                     c.send(JSON.stringify(["gameframe", { type: "playerjoin", data: dataArr[2] }]))
                                 }
                             })
-                        })
+                            if (nowTurn[0] > 0) {
+                                let save = getSave(dataPacket.id)
+                                let saveArr = save.split("\n")
+                                let lookForMap
+                                if (dataArr[2] == 0) {
+                                    lookForMap = "blue"
+                                } else {
+                                    lookForMap = "red"
+                                }
+                                let map
+                                if (save.includes("red attack")) {
+                                    map = saveArr[saveArr.lookForLastInclude(lookForMap) - 1].slice(6)
 
+                                } else {
+                                    map = saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6)
+
+                                }
+                                ws.send(JSON.parse(["gameframe", { type: "map", map }]))
+                            }
+                        })
                     })
                 })
                 break
@@ -145,14 +167,16 @@ wss.on('connection', function connection(ws) {
                             map = JSON.parse(saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6))
 
                         }
+
                         switch (dataPacket.data.type) {
                             case "normal":
+                                let dieShip = []
+
                                 let posToAtt = id2pos(dataPacket.data.pos, 8)
                                 if (map[posToAtt[0]][posToAtt[1]] == null) {
                                     broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
                                     map[posToAtt[0]][posToAtt[1]] = "attacked"
                                 } else {
-                                    let dieShip = []
                                     broadcast(ws.uuid, ["gameframe", { type: "attsuccess", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
                                     let shipToBeAtt = map[posToAtt[0]][posToAtt[1]]
                                     for (let index = 0; index < map.length; index++) {
@@ -164,25 +188,29 @@ wss.on('connection', function connection(ws) {
                                                     element_.alive -= 1
                                                     if (element_.alive == 0) {
                                                         dieShip.push(index * width + index_)
-                                                        map[index][index_]="sinkShip"
+                                                        map[index][index_] = "sinkShip"
                                                     }
                                                 }
-
                                             }
                                         }
                                     }
-                                    if (dieShip.length > 0) {
-                                        broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
-                                        if(!JSON.stringify(map).includes("aliveShip")){
-                                            broadcast(ws.uuid, ["gameframe", { type: "playersuccess",faction: dataPacket.faction}])
-
-                                        }
-                                    }
-
                                 }
                                 appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
                                 appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
-
+                                if (dieShip.length > 0) {
+                                    broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
+                                    if (!JSON.stringify(map).includes("aliveShip")) {
+                                        broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
+                                        appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
+                                        let delSQL = 'DELETE FROM savesmap WHERE uuid="' + dataPacket.id + '"'
+                                        console.log(delSQL);
+                                        sql.query(delSQL, function (err, result) {
+                                            if (err) {
+                                                console.log('[SELECT ERROR] - ', err.message);
+                                            }
+                                        })
+                                    }
+                                }
                                 break;
                             default:
                                 break;
@@ -215,12 +243,7 @@ function getGames() {
             }
             for (let index = 0; index < result.length; index++) {
                 const element = result[index];
-                let line = []
-                line.push(element.name)
-                line.push(element.uuid)
-                line.push(element.blueState)
-                line.push(element.redState)
-                line.push(element.gameState)
+                let line = { name: element.name, id: element.uuid, blueState: element.blueState, redState: element.redState, gameState: element.gameState, tags: JSON.parse(element.tags) }
                 returnData.push(line)
             }
             resolve(returnData)
