@@ -22,7 +22,6 @@ let sql = createConnection({
     database: 'feiegame_battleship'
 });
 
-let width = 8
 let gamesArr = getGames()
 const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
@@ -68,12 +67,8 @@ wss.on('connection', function connection(ws) {
                 let d = new Date()
                 writeFile("c:/xampp/htdocs/WServer/saves/" + id + ".save", d.toString() + "\n").then(() => {
                 })
-
                 ws.send(JSON.stringify(["enterroom", id, 0, 0]))
                 break;
-            case "gstart":
-
-                break
             case "genter":
                 let Faction = () => {
                     if (dataArr[2] == 0) {
@@ -81,7 +76,6 @@ wss.on('connection', function connection(ws) {
                     } else { return "redState" }
                 }
                 let enterSQL = "UPDATE savesmap SET " + Faction() + "=2 WHERE uuid='" + dataArr[1] + "';"
-
                 console.log(enterSQL);
                 sql.query(enterSQL, function (err, result) {
                     if (err) {
@@ -97,7 +91,18 @@ wss.on('connection', function connection(ws) {
                         }
                         getNowTurn(dataArr[1]
                         ).then(nowTurn => {
-                            ws.send(JSON.stringify(["entergame", result[0].blueState, result[0].redState, nowTurn]))
+                            getSaveTags(dataArr[1]).then(tags => {
+                                ws.send(JSON.stringify(["entergame", { blueState: result[0].blueState, redState: result[0].redState, nowTurn: nowTurn[0], nowPlayer: nowTurn[1], tags: tags ,name:result[0].name}]))
+                                if(tags.includes("th11")){
+                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4}]}]))
+                                }else if(tags.includes("th21")){
+                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4}]}]))
+                                }else if(tags.includes("th31")){
+                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4},{type:"ship",length:4}]}]))
+                                }else{
+                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4}]}]))
+                                }
+                            })
                             ws.uuid = dataArr[1]
                             wss.clients.forEach(c => {
                                 if (c.uuid == dataArr[1]) {
@@ -137,10 +142,9 @@ wss.on('connection', function connection(ws) {
                     }
                     console.log(result[0]);
                     ws.send(JSON.stringify(["enterroom", dataArr[1], result[0].blueState, result[0].redState]))
-
                 })
-
                 break
+                
             case "gameframe":
                 let dataPacket = dataArr[1]
                 switch (dataPacket.type) {
@@ -151,71 +155,84 @@ wss.on('connection', function connection(ws) {
                         getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
                         break;
                     case "attack":
-                        let lookForMap
-                        if (dataPacket.faction == "blue") {
-                            lookForMap = "red"
-                        } else {
-                            lookForMap = "blue"
-                        }
-                        let save = getSave(dataPacket.id)
-                        let saveArr = save.split("\n")
-                        let map
-                        if (save.includes("red attack")) {
-                            map = JSON.parse(saveArr[saveArr.lookForLastInclude(lookForMap) - 1].slice(6))
+                        getSaveTags(dataPacket.id).then(tags => {
+                            let height, width
+                            if (tags.includes("td11")) {
+                                height = width = 9
+                            } else if (tags.includes("td21")) {
+                                height = width = 10
+                            } else if (tags.includes("td31")) {
+                                height = width = 12
+                            } else {
+                                height = width = 8
+                            }
+                            let lookForMap
+                            if (dataPacket.faction == "blue") {
+                                lookForMap = "red"
+                            } else {
+                                lookForMap = "blue"
+                            }
+                            let save = getSave(dataPacket.id)
+                            let saveArr = save.split("\n")
+                            let map
+                            if (save.includes("red attack")) {
+                                map = JSON.parse(saveArr[saveArr.lookForLastInclude(lookForMap) - 1].slice(6))
 
-                        } else {
-                            map = JSON.parse(saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6))
+                            } else {
+                                map = JSON.parse(saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6))
 
-                        }
+                            }
 
-                        switch (dataPacket.data.type) {
-                            case "normal":
-                                let dieShip = []
+                            switch (dataPacket.data.type) {
+                                case "normal":
+                                    let dieShip = []
 
-                                let posToAtt = id2pos(dataPacket.data.pos, 8)
-                                if (map[posToAtt[0]][posToAtt[1]] == null) {
-                                    broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
-                                    map[posToAtt[0]][posToAtt[1]] = "attacked"
-                                } else {
-                                    broadcast(ws.uuid, ["gameframe", { type: "attsuccess", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
-                                    let shipToBeAtt = map[posToAtt[0]][posToAtt[1]]
-                                    for (let index = 0; index < map.length; index++) {
-                                        const element = map[index];
-                                        for (let index_ = 0; index_ < element.length; index_++) {
-                                            const element_ = element[index_];
-                                            if (element_) {
-                                                if (element_.id == shipToBeAtt.id) {
-                                                    element_.alive -= 1
-                                                    if (element_.alive == 0) {
-                                                        dieShip.push(index * width + index_)
-                                                        map[index][index_] = "sinkShip"
+                                    let posToAtt = id2pos(dataPacket.data.pos, width)
+                                    if (map[posToAtt[0]][posToAtt[1]] == null) {
+                                        broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
+                                        map[posToAtt[0]][posToAtt[1]] = "attacked"
+                                    } else {
+                                        broadcast(ws.uuid, ["gameframe", { type: "attsuccess", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
+                                        let shipToBeAtt = map[posToAtt[0]][posToAtt[1]]
+                                        for (let index = 0; index < map.length; index++) {
+                                            const element = map[index];
+                                            for (let index_ = 0; index_ < element.length; index_++) {
+                                                const element_ = element[index_];
+                                                if (element_) {
+                                                    if (element_.id == shipToBeAtt.id) {
+                                                        element_.alive -= 1
+                                                        if (element_.alive == 0) {
+                                                            dieShip.push(index * width + index_)
+                                                            map[index][index_] = "sinkShip"
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
                                     }
-                                }
-                                appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
-                                appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
-                                if (dieShip.length > 0) {
-                                    broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
-                                    if (!JSON.stringify(map).includes("aliveShip")) {
-                                        broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
-                                        appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
-                                        let delSQL = 'DELETE FROM savesmap WHERE uuid="' + dataPacket.id + '"'
-                                        console.log(delSQL);
-                                        sql.query(delSQL, function (err, result) {
-                                            if (err) {
-                                                console.log('[SELECT ERROR] - ', err.message);
-                                            }
-                                        })
+                                    appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
+                                    appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
+                                    if (dieShip.length > 0) {
+                                        broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
+                                        if (!JSON.stringify(map).includes("aliveShip")) {
+                                            broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
+                                            appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
+                                            let delSQL = 'DELETE FROM savesmap WHERE uuid="' + dataPacket.id + '"'
+                                            console.log(delSQL);
+                                            sql.query(delSQL, function (err, result) {
+                                                if (err) {
+                                                    console.log('[SELECT ERROR] - ', err.message);
+                                                }
+                                            })
+                                        }
                                     }
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-                        getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+                                    break;
+                                default:
+                                    break;
+                            }
+                            getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+
+                        })
                     default:
                         break;
                 }
@@ -250,6 +267,19 @@ function getGames() {
         })
     })
 }
+
+function attack(posid, faction, type, roomid) {
+    switch (type) {
+        case "no":
+
+            break;
+
+        default:
+            break;
+    }
+}
+
+
 
 function getNowTurn(id) {
     return new Promise(function (resolve, reject) {
@@ -288,6 +318,19 @@ function broadcast(id, data) {
     })
 
 }
+
+function getSaveTags(id) {
+    return new Promise(function (resolve, reject) {
+        sql.query('SELECT * FROM savesmap WHERE uuid="' + id + '"', function (err, result) {
+            if (err) {
+                console.log('[SELECT ERROR] - ', err.message);
+                reject()
+            }
+            resolve(JSON.parse(result[0].tags))
+        })
+    })
+}
+
 
 String.prototype.includeTimes = function (str) {
     let oriStr = this
