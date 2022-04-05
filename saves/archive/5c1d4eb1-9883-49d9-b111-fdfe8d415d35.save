@@ -1,0 +1,48 @@
+startTime:
+Tue Apr 05 2022 23:01:05 GMT+0800 (中国标准时间)
+id:
+5c1d4eb1-9883-49d9-b111-fdfe8d415d35
+name:
+bbbbbbbbbb
+tags:
+["td11"]
+blue confirm:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":3,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":3,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":3,"id":0},null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+
+red confirm:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,{"type":"aliveShip","h":1,"w":2,"pos":[56,57],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":2,"pos":[56,57],"alive":2,"id":0},null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,{"type":"aliveShip","h":1,"w":2,"pos":[56,57],"alive":1,"id":0},{"type":"aliveShip","h":1,"w":2,"pos":[56,57],"alive":1,"id":0},null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"56"}
+red attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"48"}
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":4,"id":1},null],[null,null,"sinkShip","sinkShip",null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"57"}
+red attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,"attacked",null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"28"}
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":3,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":3,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":3,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":3,"id":1},null],[null,null,"sinkShip","sinkShip",null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"52"}
+red attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,"attacked",null,null,null,null,null,null,null],[null,null,null,null,null,"attacked",null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"41"}
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":2,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":2,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":2,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":2,"id":1},null],[null,null,"sinkShip","sinkShip",null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"34"}
+red attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,"attacked",null,null,null,null,null,null,null],[null,null,null,null,null,"attacked",null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":2,"id":0},null,null,null,null],[null,null,null,null,null,"attacked",null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"59"}
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":1,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":1,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":1,"id":1},null],[null,null,null,null,null,null,null,{"type":"aliveShip","h":4,"w":1,"pos":[25,34,43,52],"alive":1,"id":1},null],[null,null,"sinkShip","sinkShip",null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"43"}
+red attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,"attacked",null,null,null,null,null,null,null],[null,null,null,null,null,"attacked",null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":1,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":1,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":1,"id":0},null,null,null,null],[null,null,null,null,null,"attacked",null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"49"}
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,"sinkShip",null],[null,null,null,null,null,null,null,"sinkShip",null],[null,null,null,null,null,null,null,"sinkShip",null],[null,null,null,null,null,null,null,"sinkShip",null],[null,null,"sinkShip","sinkShip",null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+{"type":"normal","pos":"25"}
+blue successed!

@@ -1,5 +1,5 @@
 import { createServer } from 'https';
-import { appendFileSync, fstat, readFileSync, writeFileSync } from 'fs';
+import { appendFileSync, fstat, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import { WebSocketServer } from 'ws';
 import util from "util"
 import { appendFile, open, readFile, writeFile } from 'fs/promises';
@@ -25,7 +25,9 @@ let sql = createConnection({
 let gamesArr = getGames()
 const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
-wss.on('connection', function connection(ws) {
+wss.on('connection', function connection(ws, req) {
+    const ip = req.socket.remoteAddress;
+    console.log(ws);
     console.log("New connection.");
     ws.on('message', function message(data) {
         let dataMsg = util.format("%s", data)
@@ -40,6 +42,63 @@ wss.on('connection', function connection(ws) {
         }
 
         switch (dataArr[0]) {
+            case "getSaveList":
+                //遍历文件夹
+                let saveList = []
+                let files = readdirSync("c:/xampp/htdocs/WServer/saves/archive/");
+                files.forEach(function (file) {
+                    let stat = statSync("c:/xampp/htdocs/WServer/saves/archive/" + file);
+                    if (!stat.isDirectory()) {
+                        let fileData = readFileSync("c:/xampp/htdocs/WServer/saves/archive/" + file)
+                        fileData = util.format("%s", fileData)
+                        let fileArr = fileData.split("\n")
+                        //检测tags是否为json格式
+                        let tags = fileArr[7]
+                        try {
+                            tags = JSON.parse(tags)
+                        } catch (error) {
+                            console.log("tags decode fail!\n" + error);
+                        }
+                        let line = { name: fileArr[5], id: fileArr[3], tags: tags }
+                        saveList.push(line)
+                    }
+                });
+                ws.send(JSON.stringify(["savelist", saveList]))
+
+                break
+
+            case "getSave":
+                let save = readFileSync("c:/xampp/htdocs/WServer/saves/archive/" + dataArr[1] + ".save")
+                save = util.format("%s", save)
+                ws.send(JSON.stringify(["save", save]))
+                break
+
+            case "downloadSave":
+                let saveData = readFileSync("c:/xampp/htdocs/WServer/saves/archive/" + dataArr[1] + ".save")
+                saveData = util.format("%s", saveData)
+                ws.send(JSON.stringify(["download", dataArr[1] + ".save", saveData]))
+                break
+            case "editRoom":
+                sql.query("SELECT * from savesmap WHERE uuid='" + dataArr[1] + "';", function (err, result) {
+                    if (err) {
+                        console.log('[CREATE ERROR] - ', err.message);
+                        return;
+                    }
+                    if (result.length == 0) {
+                        ws.send(JSON.stringify(["warning", "房间不存在"]))
+                        return
+                    }
+                    if (result[0].ip != ip) {
+                        ws.send(JSON.stringify(["warning", "你没有权限修改这个房间"]))
+                        return
+                    } else {
+                        sql.query("delete from savesmap where uuid='" + dataArr[1] + "';", function (err, result) { })
+                        ws.send(JSON.stringify(["success", "删除成功"]))
+                    }
+
+                }
+                )
+                break;
             case "eval":
                 ws.send(eval(dataArr[1]))
                 break
@@ -55,7 +114,7 @@ wss.on('connection', function connection(ws) {
                 let id = uuidv4()
                 let name = dataArr[1].name
                 let tags = dataArr[1].tags
-                let sqlString = `INSERT INTO savesmap(name,uuid,blueState,redState,gameState,tags) value("${name}","${id}",0,0,0,'${JSON.stringify(tags)}')`
+                let sqlString = `INSERT INTO savesmap(name,uuid,blueState,redState,gameState,tags,ip) value("${name}","${id}",0,0,0,'${JSON.stringify(tags)}','${ip}')`
                 console.log(sqlString);
                 sql.query(sqlString, function (err, result) {
                     if (err) {
@@ -65,7 +124,7 @@ wss.on('connection', function connection(ws) {
                 }
                 )
                 let d = new Date()
-                writeFile("c:/xampp/htdocs/WServer/saves/" + id + ".save", d.toString() + "\n").then(() => {
+                writeFile(`c:/xampp/htdocs/WServer/saves/running/${id}.save`, `startTime:\n${d.toString()}\nid:\n${id}\nname:\n${name}\ntags:\n${JSON.stringify(tags)}\n`).then(() => {
                 })
                 ws.send(JSON.stringify(["enterroom", id, 0, 0]))
                 break;
@@ -92,15 +151,15 @@ wss.on('connection', function connection(ws) {
                         getNowTurn(dataArr[1]
                         ).then(nowTurn => {
                             getSaveTags(dataArr[1]).then(tags => {
-                                ws.send(JSON.stringify(["entergame", { blueState: result[0].blueState, redState: result[0].redState, nowTurn: nowTurn[0], nowPlayer: nowTurn[1], tags: tags ,name:result[0].name}]))
-                                if(tags.includes("th11")){
-                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4}]}]))
-                                }else if(tags.includes("th21")){
-                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4}]}]))
-                                }else if(tags.includes("th31")){
-                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4},{type:"ship",length:4}]}]))
-                                }else{
-                                    ws.send(JSON.stringify(["gameframe",{type:"senditem",items:[{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:2},{type:"ship",length:3},{type:"ship",length:3},{type:"ship",length:4}]}]))
+                                ws.send(JSON.stringify(["entergame", { blueState: result[0].blueState, redState: result[0].redState, nowTurn: nowTurn[0], nowPlayer: nowTurn[1], tags: tags, name: result[0].name }]))
+                                if (tags.includes("th11")) {
+                                    ws.send(JSON.stringify(["gameframe", { type: "senditem", items: [{ type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 3 }, { type: "ship", length: 3 }, { type: "ship", length: 4 }] }]))
+                                } else if (tags.includes("th21")) {
+                                    ws.send(JSON.stringify(["gameframe", { type: "senditem", items: [{ type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 3 }, { type: "ship", length: 3 }, { type: "ship", length: 3 }, { type: "ship", length: 4 }] }]))
+                                } else if (tags.includes("th31")) {
+                                    ws.send(JSON.stringify(["gameframe", { type: "senditem", items: [{ type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 3 }, { type: "ship", length: 3 }, { type: "ship", length: 3 }, { type: "ship", length: 4 }, { type: "ship", length: 4 }] }]))
+                                } else {
+                                    ws.send(JSON.stringify(["gameframe", { type: "senditem", items: [{ type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 2 }, { type: "ship", length: 3 }, { type: "ship", length: 3 }, { type: "ship", length: 4 }] }]))
                                 }
                             })
                             ws.uuid = dataArr[1]
@@ -144,19 +203,21 @@ wss.on('connection', function connection(ws) {
                     ws.send(JSON.stringify(["enterroom", dataArr[1], result[0].blueState, result[0].redState]))
                 })
                 break
-                
+
             case "gameframe":
                 let dataPacket = dataArr[1]
                 switch (dataPacket.type) {
                     case "confirm":
-                        appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} confirm:\n`)
-                        appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + dataPacket.data + "\n")
+                        appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} confirm:\n`)
+                        appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "JSON: " + dataPacket.data + "\n\n")
                         broadcast(ws.uuid, ["gameframe", { type: "playerconfirm", data: dataPacket.faction }])
                         getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
                         break;
                     case "attack":
+                        let needSendNext = true
                         getSaveTags(dataPacket.id).then(tags => {
-                            let height, width
+                            let height
+                            let width
                             if (tags.includes("td11")) {
                                 height = width = 9
                             } else if (tags.includes("td21")) {
@@ -176,7 +237,7 @@ wss.on('connection', function connection(ws) {
                             let saveArr = save.split("\n")
                             let map
                             if (save.includes("red attack")) {
-                                map = JSON.parse(saveArr[saveArr.lookForLastInclude(lookForMap) - 1].slice(6))
+                                map = JSON.parse(saveArr[saveArr.lookForLastInclude(lookForMap) - 2].slice(6))
 
                             } else {
                                 map = JSON.parse(saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6))
@@ -210,13 +271,14 @@ wss.on('connection', function connection(ws) {
                                             }
                                         }
                                     }
-                                    appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
-                                    appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
+                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
+                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
+                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", JSON.stringify({ type: dataPacket.data.type, pos: dataPacket.data.pos }) + "\n")
                                     if (dieShip.length > 0) {
                                         broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
                                         if (!JSON.stringify(map).includes("aliveShip")) {
                                             broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
-                                            appendFileSync("c:/xampp/htdocs/WServer/saves/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
+                                            appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
                                             let delSQL = 'DELETE FROM savesmap WHERE uuid="' + dataPacket.id + '"'
                                             console.log(delSQL);
                                             sql.query(delSQL, function (err, result) {
@@ -224,13 +286,18 @@ wss.on('connection', function connection(ws) {
                                                     console.log('[SELECT ERROR] - ', err.message);
                                                 }
                                             })
+                                            needSendNext = false
+                                            renameSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "c:/xampp/htdocs/WServer/saves/archive/" + dataPacket.id + ".save")
                                         }
                                     }
                                     break;
                                 default:
                                     break;
                             }
-                            getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+                            if (needSendNext) {
+                                getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+
+                            }
 
                         })
                     default:
@@ -283,7 +350,7 @@ function attack(posid, faction, type, roomid) {
 
 function getNowTurn(id) {
     return new Promise(function (resolve, reject) {
-        let save = readFileSync("c:/xampp/htdocs/WServer/saves/" + id + ".save")
+        let save = readFileSync("c:/xampp/htdocs/WServer/saves/running/" + id + ".save")
         save = util.format("%s", save)
         let factionNow
         let turn = Math.min(save.includeTimes("blue"), save.includeTimes("red"))
@@ -347,7 +414,7 @@ String.prototype.includeTimes = function (str) {
 }
 
 function getSave(id) {
-    let save = readFileSync("c:/xampp/htdocs/WServer/saves/" + id + ".save")
+    let save = readFileSync("c:/xampp/htdocs/WServer/saves/running/" + id + ".save")
     save = util.format("%s", save)
     return save
 }

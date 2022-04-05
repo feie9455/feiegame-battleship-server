@@ -1,0 +1,14 @@
+startTime:
+Tue Apr 05 2022 22:53:26 GMT+0800 (中国标准时间)
+id:
+0c7913ab-c356-4e78-b5f0-ff252f6333e5
+name:
+璨泥马の房间2
+tags:
+["td11"]
+blue confirm:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,{"type":"aliveShip","h":1,"w":2,"pos":[20,21],"alive":2,"id":1},{"type":"aliveShip","h":1,"w":2,"pos":[20,21],"alive":2,"id":1},null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":3,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":3,"id":0},{"type":"aliveShip","h":1,"w":3,"pos":[47,48,49],"alive":3,"id":0},null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+red confirm:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,{"type":"aliveShip","h":1,"w":2,"pos":[40,41],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":2,"pos":[40,41],"alive":2,"id":0},null,null,null],[null,null,null,null,null,null,null,null,null],[null,{"type":"aliveShip","h":1,"w":3,"pos":[55,56,57],"alive":3,"id":1},{"type":"aliveShip","h":1,"w":3,"pos":[55,56,57],"alive":3,"id":1},{"type":"aliveShip","h":1,"w":3,"pos":[55,56,57],"alive":3,"id":1},null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
+blue attacked:
+JSON: [[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,{"type":"aliveShip","h":1,"w":2,"pos":[40,41],"alive":2,"id":0},{"type":"aliveShip","h":1,"w":2,"pos":[40,41],"alive":2,"id":0},null,null,null],[null,null,null,null,null,null,null,null,null],[null,{"type":"aliveShip","h":1,"w":3,"pos":[55,56,57],"alive":2,"id":1},{"type":"aliveShip","h":1,"w":3,"pos":[55,56,57],"alive":2,"id":1},{"type":"aliveShip","h":1,"w":3,"pos":[55,56,57],"alive":2,"id":1},null,null,null,null,null],[null,null,null,null,null,null,null,null,null],[null,null,null,null,null,null,null,null,null]]
