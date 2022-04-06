@@ -27,7 +27,6 @@ const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
 wss.on('connection', function connection(ws, req) {
     const ip = req.socket.remoteAddress;
-    console.log(ws);
     console.log("New connection.");
     ws.on('message', function message(data) {
         let dataMsg = util.format("%s", data)
@@ -211,7 +210,7 @@ wss.on('connection', function connection(ws, req) {
                         appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} confirm:\n`)
                         appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "JSON: " + dataPacket.data + "\n\n")
                         broadcast(ws.uuid, ["gameframe", { type: "playerconfirm", data: dataPacket.faction }])
-                        getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
+                        getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1], canAttackTimes: turn[2] } }]))
                         break;
                     case "attack":
                         let needSendNext = true
@@ -243,17 +242,27 @@ wss.on('connection', function connection(ws, req) {
                                 map = JSON.parse(saveArr[saveArr.lookForFirstInclude(lookForMap) + 1].slice(6))
 
                             }
+                            const normalAttack = async function (pos) {
 
-                            switch (dataPacket.data.type) {
-                                case "normal":
-                                    let dieShip = []
+                                let diedShip = []
+                                let posToAtt = id2pos(pos, width)
+                                if (map[posToAtt[0]][posToAtt[1]] == null) {
+                                    broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: pos, faction: dataPacket.faction } }])
+                                    return {pos:pos,isMiss:"none"}
+                                } else {
+                                    let chance = 1
+                                    let tags = await getSaveTags(dataPacket.id)
+                                    tags = JSON.stringify(tags)
+                                    if (tags.includes("tf11")) {
+                                        chance = 0.9
+                                    } else if (tags.includes("tf21")) {
+                                        chance = 0.8
+                                    } else if (tags.includes("tf31")) {
+                                        chance = 0.65
+                                    }
+                                    if (hit(chance)) {
 
-                                    let posToAtt = id2pos(dataPacket.data.pos, width)
-                                    if (map[posToAtt[0]][posToAtt[1]] == null) {
-                                        broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
-                                        map[posToAtt[0]][posToAtt[1]] = "attacked"
-                                    } else {
-                                        broadcast(ws.uuid, ["gameframe", { type: "attsuccess", data: { pos: dataPacket.data.pos, faction: dataPacket.faction } }])
+                                        broadcast(ws.uuid, ["gameframe", { type: "attsuccess", data: { pos: pos, faction: dataPacket.faction } }])
                                         let shipToBeAtt = map[posToAtt[0]][posToAtt[1]]
                                         for (let index = 0; index < map.length; index++) {
                                             const element = map[index];
@@ -261,42 +270,74 @@ wss.on('connection', function connection(ws, req) {
                                                 const element_ = element[index_];
                                                 if (element_) {
                                                     if (element_.id == shipToBeAtt.id) {
-                                                        element_.alive -= 1
+                                                        map[index][index_].alive -= 1
                                                         if (element_.alive == 0) {
-                                                            dieShip.push(index * width + index_)
+                                                            diedShip=diedShip.concat(element_.pos)
                                                             map[index][index_] = "sinkShip"
                                                         }
                                                     }
                                                 }
                                             }
+
                                         }
-                                    }
-                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
-                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
-                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", JSON.stringify({ type: dataPacket.data.type, pos: dataPacket.data.pos }) + "\n")
-                                    if (dieShip.length > 0) {
-                                        broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: dieShip, faction: dataPacket.faction } }])
-                                        if (!JSON.stringify(map).includes("aliveShip")) {
-                                            broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
-                                            appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
-                                            let delSQL = 'DELETE FROM savesmap WHERE uuid="' + dataPacket.id + '"'
-                                            console.log(delSQL);
-                                            sql.query(delSQL, function (err, result) {
-                                                if (err) {
-                                                    console.log('[SELECT ERROR] - ', err.message);
-                                                }
-                                            })
-                                            needSendNext = false
-                                            renameSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "c:/xampp/htdocs/WServer/saves/archive/" + dataPacket.id + ".save")
+                                        map[posToAtt[0]][posToAtt[1]]="attacked"
+                                        if (diedShip.length > 0) {
+                                            shipDied(diedShip)
                                         }
+                                        return {pos:pos,isMiss:"false"}
                                     }
+                                    else {
+                                        broadcast(ws.uuid, ["gameframe", { type: "attmiss", data: { pos: pos, faction: dataPacket.faction } }])
+                                        return {pos:pos,isMiss:"true"}
+                                    }
+
+
+                                }
+
+                            }
+                            const shipDied = (pos) => {
+                                broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: pos, faction: dataPacket.faction } }])
+
+                            }
+                            const attEnd = (map,result) => {
+                                appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
+                                appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
+                                appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", JSON.stringify({ type: dataPacket.data.type, result:result }) + "\n")
+                                if (!JSON.stringify(map).includes("aliveShip")) {
+                                    broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
+                                    appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
+                                    let delSQL = 'DELETE FROM savesmap WHERE uuid="' + dataPacket.id + '"'
+                                    console.log(delSQL);
+                                    sql.query(delSQL, function (err, result) {
+                                        if (err) {
+                                            console.log('[SELECT ERROR] - ', err.message);
+                                        }
+                                    })
+                                    needSendNext = false
+                                    renameSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "c:/xampp/htdocs/WServer/saves/archive/" + dataPacket.id + ".save")
+                                }
+    
+                                if (needSendNext) {
+    
+                                    getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1], canAttackTimes: turn[2] } }]))
+    
+                                }
+    
+                            }
+                            switch (dataPacket.data.type) {
+
+                                case "normal":
+                                    let commands = []
+                                    dataPacket.data.pos.forEach(pos => {
+                                        commands.push(normalAttack(pos))
+                                    })
+                                    Promise.all(commands).then(result => {
+                                        attEnd(map,result)
+                                    })
+
                                     break;
                                 default:
                                     break;
-                            }
-                            if (needSendNext) {
-                                getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1] } }]))
-
                             }
 
                         })
@@ -360,7 +401,25 @@ function getNowTurn(id) {
         else {
             factionNow = "red"
         }
-        resolve([turn, factionNow])
+        let canAttackTimes = 1
+        getSaveTags(id).then(tags => {
+            tags = JSON.stringify(tags)
+            if (tags.includes("te11")) {
+                if (turn % 4 == 0) {
+                    canAttackTimes = 2
+                }
+            }
+            if (tags.includes("te21")) {
+                if (turn % 2 == 0) {
+                    canAttackTimes = 2
+                }
+            }
+            if (tags.includes("te31")) {
+                canAttackTimes = 2
+
+            }
+            resolve([turn, factionNow, canAttackTimes])
+        })
     })
 }
 
@@ -397,6 +456,18 @@ function getSaveTags(id) {
         })
     })
 }
+
+//命中判定
+const hit = (chance) => {
+    if (Math.random() <= chance) {
+        return true
+    } else {
+        return false
+    }
+
+}
+
+
 
 
 String.prototype.includeTimes = function (str) {
