@@ -41,6 +41,34 @@ wss.on('connection', function connection(ws, req) {
         }
 
         switch (dataArr[0]) {
+            case "chat":
+                let msg=dataArr[2]
+                msg = msg.allReplace("fuck")
+                msg = msg.allReplace("shit")
+                msg = msg.allReplace("bitch")
+                msg = msg.allReplace("asshole")
+                msg = msg.allReplace("dick")
+                msg = msg.allReplace("pussy")
+                msg = msg.allReplace("操你妈")
+                msg = msg.allReplace("操你娘")
+                msg = msg.allReplace("操你爸")
+                msg = msg.allReplace("操你公")
+                msg = msg.allReplace("傻逼")
+                msg = msg.allReplace("傻比")
+                msg = msg.allReplace("傻B")
+                msg = msg.allReplace("傻b")
+                msg = msg.allReplace("智障")
+                msg = msg.allReplace("屌")
+                msg = msg.allReplace("屌丝")
+                msg = msg.allReplace("屌妳")
+                msg = msg.allReplace("屌你")
+                msg = msg.allReplace("屌妳妈")
+                msg = msg.allReplace("孤儿")
+                msg = msg.allReplace("狗屎")
+                msg = msg.allReplace("狗日")
+                msg = msg.allReplace("日你")
+                broadcast(ws.uuid, ["chat",{faction: dataArr[1], type: "chat", msg: msg}])
+                break
             case "getSaveList":
                 //遍历文件夹
                 let saveList = []
@@ -468,7 +496,19 @@ const hit = (chance) => {
 }
 
 
-
+String.prototype.allReplace = function (str) {
+    let oriStr = this
+    let num = 0
+    let replace = () => {
+        if (oriStr != oriStr.replace(str, "*".repeat(str.length))) {
+            num++
+            oriStr = oriStr.replace(str, "*".repeat(str.length))
+            replace()
+        }
+    }
+    replace()
+    return oriStr
+}
 
 String.prototype.includeTimes = function (str) {
     let oriStr = this
