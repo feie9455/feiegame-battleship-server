@@ -26,6 +26,7 @@ let gamesArr = getGames()
 const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
 wss.on('connection', function connection(ws, req) {
+    ws.send(JSON.stringify(["hello", "world"]))
     const ip = req.socket.remoteAddress;
     console.log("New connection.");
     ws.on('message', function message(data) {
@@ -223,11 +224,15 @@ wss.on('connection', function connection(ws, req) {
                 console.log(searchSQL);
                 sql.query(searchSQL, function (err, result) {
                     if (err) {
-                        console.log('[CREATE ERROR] - ', err.message);
+                        ws.send(JSON.stringify(["warning","房间不存在，请检查分享链接"]))
                         return;
                     }
                     console.log(result[0]);
-                    ws.send(JSON.stringify(["enterroom", dataArr[1], result[0].blueState, result[0].redState]))
+                    if(result[0]){
+                    ws.send(JSON.stringify(["enterroom", dataArr[1], result[0].blueState, result[0].redState]))}
+                    else{
+                        ws.send(JSON.stringify(["warning","房间不存在，请检查分享链接"]))
+                    }
                 })
                 break
 
@@ -388,7 +393,6 @@ server.listen(9454);
 function getGames() {
     return new Promise(function (resolve, reject) {
         let returnData = []
-        console.log('SELECT * FROM savesmap');
         sql.query('SELECT * FROM savesmap', function (err, result) {
             if (err) {
                 console.log('[SELECT ERROR] - ', err.message);
@@ -553,3 +557,4 @@ Array.prototype.lookForFirstInclude = function (str) {
     }
     return pos
 }
+console.log("Server started in "+String(performance.now())+"ms");
