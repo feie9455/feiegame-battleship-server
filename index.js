@@ -1,11 +1,11 @@
 import { createServer } from 'https';
-import { appendFileSync, fstat, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
+import { appendFileSync,  readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import { WebSocketServer } from 'ws';
 import util from "util"
 import { appendFile, open, readFile, writeFile } from 'fs/promises';
 import { v4 as uuidv4 } from 'uuid';
-import { format } from 'path';
 import { createConnection } from "mysql"
+import { zh, en } from "naughty-words";
 
 const server = createServer({
     cert: readFileSync('C:/xampp/htdocs/crt/server.crt'),
@@ -32,7 +32,6 @@ wss.on('connection', function connection(ws, req) {
     ws.on('message', function message(data) {
         let dataMsg = util.format("%s", data)
         console.log('received: %s', dataMsg);
-
         let dataArr
         try {
             dataArr = JSON.parse(dataMsg)
@@ -40,35 +39,12 @@ wss.on('connection', function connection(ws, req) {
             console.log("dataArr decode fail!\n" + error);
             return
         }
-
         switch (dataArr[0]) {
             case "chat":
-                let msg=dataArr[2]
-                msg = msg.allReplace("fuck")
-                msg = msg.allReplace("shit")
-                msg = msg.allReplace("bitch")
-                msg = msg.allReplace("asshole")
-                msg = msg.allReplace("dick")
-                msg = msg.allReplace("pussy")
-                msg = msg.allReplace("操你妈")
-                msg = msg.allReplace("操你娘")
-                msg = msg.allReplace("操你爸")
-                msg = msg.allReplace("操你公")
-                msg = msg.allReplace("傻逼")
-                msg = msg.allReplace("傻比")
-                msg = msg.allReplace("傻B")
-                msg = msg.allReplace("傻b")
-                msg = msg.allReplace("智障")
-                msg = msg.allReplace("屌")
-                msg = msg.allReplace("屌丝")
-                msg = msg.allReplace("屌妳")
-                msg = msg.allReplace("屌你")
-                msg = msg.allReplace("屌妳妈")
-                msg = msg.allReplace("孤儿")
-                msg = msg.allReplace("狗屎")
-                msg = msg.allReplace("狗日")
-                msg = msg.allReplace("日你")
-                broadcast(ws.uuid, ["chat",{faction: dataArr[1], type: "chat", msg: msg}])
+                let msg = dataArr[2]
+                zh.forEach(word => { msg.allReplace(word) })
+                en.forEach(word => { msg.allReplace(word) })
+                broadcast(ws.uuid, ["chat", { faction: dataArr[1], type: "chat", msg: msg }])
                 break
             case "getSaveList":
                 //遍历文件夹
@@ -224,14 +200,15 @@ wss.on('connection', function connection(ws, req) {
                 console.log(searchSQL);
                 sql.query(searchSQL, function (err, result) {
                     if (err) {
-                        ws.send(JSON.stringify(["warning","房间不存在，请检查分享链接"]))
+                        ws.send(JSON.stringify(["warning", "房间不存在，请检查分享链接"]))
                         return;
                     }
                     console.log(result[0]);
-                    if(result[0]){
-                    ws.send(JSON.stringify(["enterroom", dataArr[1], result[0].blueState, result[0].redState]))}
-                    else{
-                        ws.send(JSON.stringify(["warning","房间不存在，请检查分享链接"]))
+                    if (result[0]) {
+                        ws.send(JSON.stringify(["enterroom", dataArr[1], result[0].blueState, result[0].redState]))
+                    }
+                    else {
+                        ws.send(JSON.stringify(["warning", "房间不存在，请检查分享链接"]))
                     }
                 })
                 break
@@ -279,9 +256,12 @@ wss.on('connection', function connection(ws, req) {
 
                                 let diedShip = []
                                 let posToAtt = id2pos(pos, width)
+                                if (map[posToAtt[0]][posToAtt[1]] == "attacked") {
+                                    return
+                                }
                                 if (map[posToAtt[0]][posToAtt[1]] == null) {
                                     broadcast(ws.uuid, ["gameframe", { type: "attfail", data: { pos: pos, faction: dataPacket.faction } }])
-                                    return {pos:pos,isMiss:"none"}
+                                    return { pos: pos, isMiss: "none" }
                                 } else {
                                     let chance = 1
                                     let tags = await getSaveTags(dataPacket.id)
@@ -305,7 +285,7 @@ wss.on('connection', function connection(ws, req) {
                                                     if (element_.id == shipToBeAtt.id) {
                                                         map[index][index_].alive -= 1
                                                         if (element_.alive == 0) {
-                                                            diedShip=diedShip.concat(element_.pos)
+                                                            diedShip = diedShip.concat(element_.pos)
                                                             map[index][index_] = "sinkShip"
                                                         }
                                                     }
@@ -313,15 +293,15 @@ wss.on('connection', function connection(ws, req) {
                                             }
 
                                         }
-                                        map[posToAtt[0]][posToAtt[1]]="attacked"
+                                        map[posToAtt[0]][posToAtt[1]] = "attacked"
                                         if (diedShip.length > 0) {
                                             shipDied(diedShip)
                                         }
-                                        return {pos:pos,isMiss:"false"}
+                                        return { pos: pos, isMiss: "false" }
                                     }
                                     else {
                                         broadcast(ws.uuid, ["gameframe", { type: "attmiss", data: { pos: pos, faction: dataPacket.faction } }])
-                                        return {pos:pos,isMiss:"true"}
+                                        return { pos: pos, isMiss: "true" }
                                     }
 
 
@@ -332,10 +312,10 @@ wss.on('connection', function connection(ws, req) {
                                 broadcast(ws.uuid, ["gameframe", { type: "shipSink", data: { shipid: pos, faction: dataPacket.faction } }])
 
                             }
-                            const attEnd = (map,result) => {
+                            const attEnd = (map, result) => {
                                 appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} attacked:\n`)
                                 appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "JSON: " + JSON.stringify(map) + "\n")
-                                appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", JSON.stringify({ type: dataPacket.data.type, result:result }) + "\n")
+                                appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", JSON.stringify({ type: dataPacket.data.type, result: result }) + "\n")
                                 if (!JSON.stringify(map).includes("aliveShip")) {
                                     broadcast(ws.uuid, ["gameframe", { type: "playersuccess", faction: dataPacket.faction }])
                                     appendFileSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", `${dataPacket.faction} successed!\n`)
@@ -349,13 +329,13 @@ wss.on('connection', function connection(ws, req) {
                                     needSendNext = false
                                     renameSync("c:/xampp/htdocs/WServer/saves/running/" + dataPacket.id + ".save", "c:/xampp/htdocs/WServer/saves/archive/" + dataPacket.id + ".save")
                                 }
-    
+
                                 if (needSendNext) {
-    
+
                                     getNowTurn(dataPacket.id).then(turn => broadcast(ws.uuid, ["gameframe", { type: "next", data: { turn: turn[0], factionNow: turn[1], canAttackTimes: turn[2] } }]))
-    
+
                                 }
-    
+
                             }
                             switch (dataPacket.data.type) {
 
@@ -365,7 +345,7 @@ wss.on('connection', function connection(ws, req) {
                                         commands.push(normalAttack(pos))
                                     })
                                     Promise.all(commands).then(result => {
-                                        attEnd(map,result)
+                                        attEnd(map, result)
                                     })
 
                                     break;
@@ -557,4 +537,4 @@ Array.prototype.lookForFirstInclude = function (str) {
     }
     return pos
 }
-console.log("Server started in "+String(performance.now())+"ms");
+console.log("Server started in " + String(performance.now()) + "ms");

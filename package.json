@@ -2,6 +2,7 @@
   "type": "module",
   "dependencies": {
     "mysql": "^2.18.1",
+    "naughty-words": "^1.2.0",
     "uuid": "^8.3.2",
     "ws": "^8.5.0"
   }
