@@ -1,5 +1,5 @@
 import { createServer } from 'https';
-import { appendFileSync,  readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
+import { appendFileSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'fs';
 import { WebSocketServer } from 'ws';
 import util from "util"
 import { appendFile, open, readFile, writeFile } from 'fs/promises';
@@ -14,15 +14,39 @@ const server = createServer({
 });
 
 const wss = new WebSocketServer({ server });
+let sql
+function createConnection_() {
+    let sql_ = createConnection({
+        host: '127.0.0.1',
+        user: 'root',
+        password: '',
+        database: 'feiegame_battleship'
+    });
+    return sql_
+}
 
-let sql = createConnection({
-    host: '127.0.0.1',
-    user: 'root',
-    password: '',
-    database: 'feiegame_battleship'
+function sqlConnect() {
+    sql = createConnection_()
+    sql.connect(function (err) {
+        if (err) {
+            console.error('Cannot connect to MySQL server.');
+            setTimeout(() => {
+                sqlConnect()
+            }, 1000);
+        } else {
+            console.log('Connected MySQL server as threadId ' + sql.threadId);
+        }
+    });
+}
+
+sqlConnect()
+sql.on('error', function (err) {
+    console.log(err);
+    setTimeout(() => {
+        sqlConnect()
+    }, 1000);
 });
-
-let gamesArr = getGames()
+let gamesArr = []
 const id2pos = (id, width) => [Math.floor(id / width), id % width]
 
 wss.on('connection', function connection(ws, req) {
@@ -40,6 +64,9 @@ wss.on('connection', function connection(ws, req) {
             return
         }
         switch (dataArr[0]) {
+            case "getNotification":
+                readFile(process.argv[1].slice(0, process.argv[1].length - 9) +"/publicNotification").then(data=>ws.send(JSON.stringify(["notification",util.format("%s",data)])))
+            break
             case "chat":
                 let msg = dataArr[2]
                 zh.forEach(word => { msg.allReplace(word) })
@@ -376,7 +403,6 @@ function getGames() {
         sql.query('SELECT * FROM savesmap', function (err, result) {
             if (err) {
                 console.log('[SELECT ERROR] - ', err.message);
-                reject()
             }
             for (let index = 0; index < result.length; index++) {
                 const element = result[index];
