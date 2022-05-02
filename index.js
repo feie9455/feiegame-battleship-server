@@ -12,7 +12,8 @@ const server = createServer({
     key: readFileSync('C:/xampp/htdocs/crt/server.key'),
     port: 9454,
 });
-
+let bannedWord = zh
+bannedWord = bannedWord.concat(en)
 const wss = new WebSocketServer({ server });
 let sql
 function createConnection_() {
@@ -65,12 +66,11 @@ wss.on('connection', function connection(ws, req) {
         }
         switch (dataArr[0]) {
             case "getNotification":
-                readFile(process.argv[1].slice(0, process.argv[1].length - 9) +"/publicNotification").then(data=>ws.send(JSON.stringify(["notification",util.format("%s",data)])))
-            break
+                readFile(process.argv[1].slice(0, process.argv[1].length - 9) + "/publicNotification").then(data => ws.send(JSON.stringify(["notification", util.format("%s", data)])))
+                break
             case "chat":
                 let msg = dataArr[2]
-                zh.forEach(word => { msg.allReplace(word) })
-                en.forEach(word => { msg.allReplace(word) })
+                bannedWord.forEach(word => { msg=msg.allReplace(word) })
                 broadcast(ws.uuid, ["chat", { faction: dataArr[1], type: "chat", msg: msg }])
                 break
             case "getSaveList":
@@ -508,10 +508,8 @@ const hit = (chance) => {
 
 String.prototype.allReplace = function (str) {
     let oriStr = this
-    let num = 0
     let replace = () => {
         if (oriStr != oriStr.replace(str, "*".repeat(str.length))) {
-            num++
             oriStr = oriStr.replace(str, "*".repeat(str.length))
             replace()
         }
